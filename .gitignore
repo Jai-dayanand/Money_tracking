@@ -30,6 +30,11 @@ env/
 node_modules/
 npm-debug.log
 yarn-error.log
+.expo/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/web-build/
 
 # IDEs
 .vscode/
@@ -55,3 +60,5 @@ Thumbs.db
 temp/
 tmp/
 .cache/
+.pytest_cache/
+backend/.pytest_cache/

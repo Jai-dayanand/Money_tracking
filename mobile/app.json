@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Money Tracking",
+    "slug": "money-tracking",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.moneytracking.app"
+    },
+    "android": {
+      "package": "com.moneytracking.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-local-authentication"
+    ]
+  }
+}

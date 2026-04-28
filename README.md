@@ -1,72 +1,116 @@
 # Money Tracking
 
-A comprehensive personal finance management application for tracking income, expenses, and financial goals with intelligent insights.
+Money Tracking is a mobile-first personal finance app with a sleek, minimal UI and a Python backend.
 
-## Features
+## Tech Stack
 
-### Security & Authentication
-- **User Authentication** - Secure login and account management
-- **Biometric Authentication** - open app using mobile biometrics 
-- **Personal PIN** - Set a personal PIN for quick and secure app access
-- **Lock / Security** - App-level security with authorization controls
-- **Data Protection** - Encrypted storage of sensitive financial information
+### Mobile app
 
-### Expense Management
-- **Flexible Budgeting** - Add budgets or track expenses without budget constraints
-- **Expense Categories** - Default and custom category support with flexible options
-- **Transaction Logging** - Core functionality to log and track all income and expense transactions
-- **Fixed vs Variable Expenses** - Categorize expenses as fixed or variable
-- **Receipt Documentation** - Attach and store receipts for transactions
+- React Native with Expo (TypeScript)
+- React Navigation
+- TanStack Query
+- React Hook Form + Zod
+- Expo Local Authentication (biometric lock)
 
-### Input Methods
-- **Voice to Text** - Log expenses using voice commands
-- **Manual Entry** - Traditional text-based transaction entry
+### Backend API
 
-### Notifications & Integration
-- **Spending Notifications** - Real-time alerts for transactions and spending
-- **Bank Integration** - Connect with banks for automatic transaction tracking
-- **Third-party Integration** - Integration with services like Spotify for subscription tracking
-- **Autopay Tracking** - Monitor automatic payments and recurring subscriptions
+- FastAPI (Python 3.12)
+- Pydantic v2
+- In-memory transaction service (MVP), designed to be replaced with MongoDB repository in the next phase
 
-### Analytics & Insights
-- **Financial Analytics** - Detailed logs and visual analytics
-- **Charts & Reports** - Interactive charts and graphical representations
-- **Saving Goals** - Set and monitor money-saving goals and portfolio targets
-- **Spending Pattern Analysis** - Monitor and analyze spending patterns over time
-- **Calendar View** - View transactions and spending by date on a calendar
+## What Is Implemented (MVP Foundation)
 
-### Data & Export
-- **Data Export** - Export financial data in CSV and JSON formats
-- **Data Portability** - Easy access and transfer of your financial information
+### Mobile
 
-### User Experience
-- **Minimal UI Design** - Clean, intuitive interface focused on good UX
-- **Custom Smart Labels** - Create custom labels for better transaction organization
-- **Multi-infrastructure Support** - Support for multiple payment methods and infrastructure
+- Biometric gate on app open (with fallback)
+- Bottom-tab navigation
+- Home dashboard with monthly balance snapshot
+- Transaction history screen with filters
+- Quick-add transaction screen
+- Insights screen with category spend bars and recent expense flow
+- API integration with graceful local fallback when backend is offline
 
-## Installation
+### Backend
 
-1. Clone the repository
-2. Install dependencies
-3. Configure your settings
-4. Run the application
-
-## Usage
-
-[Add usage instructions here]
+- Health endpoint
+- List transactions endpoint
+- Create transaction endpoint
+- Monthly summary endpoint
+- Seed data for local development
+- API tests for health, create, and summary
 
 ## Project Structure
 
-[Describe your project structure]
+```text
+.
+├── mobile/
+│   ├── App.tsx
+│   ├── package.json
+│   └── src/
+│       ├── api/
+│       ├── components/
+│       ├── hooks/
+│       ├── navigation/
+│       ├── screens/
+│       ├── security/
+│       ├── theme/
+│       ├── types/
+│       └── utils/
+├── backend/
+│   ├── pyproject.toml
+│   ├── app/
+│   │   ├── api/
+│   │   ├── core/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   └── main.py
+│   └── tests/
+├── implementation.md
+└── README.md
+```
 
-## Contributing
+## Run Locally
 
-Contributions are welcome! Please feel free to submit a pull request.
+### 1. Start backend
 
-## License
+```bash
+cd backend
+python -m venv .venv
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -e .
+uvicorn app.main:app --reload --port 8000
+```
 
-[Specify your license]
+### 2. Start mobile app
 
-## Contact
+```bash
+cd mobile
+cp .env.example .env
+npm install
+npm run start
+```
 
-[Add contact information]
+If you are using an Android emulator, set `EXPO_PUBLIC_API_URL` to `http://10.0.2.2:8000`.
+
+### 3. Run backend tests
+
+```bash
+python -m pytest backend/tests -q
+```
+
+## API Endpoints
+
+- `GET /api/v1/health`
+- `GET /api/v1/transactions`
+- `POST /api/v1/transactions`
+- `GET /api/v1/transactions/summary`
+
+## Next Milestones
+
+1. Replace in-memory backend service with MongoDB repository and indexes.
+2. Add JWT auth, refresh token rotation, and session/device tracking.
+3. Add receipt upload flow (mobile camera + object storage).
+4. Add recurring rules and notification scheduler.
+5. Add polished onboarding, PIN setup, and accessibility audit.
