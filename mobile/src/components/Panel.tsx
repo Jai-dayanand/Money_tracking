@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
 
-import { colors, spacing } from "../theme";
+import { spacing, useAppTheme } from "../theme";
 
 type PanelProps = {
   children: ReactNode;
@@ -9,23 +9,27 @@ type PanelProps = {
 };
 
 export function Panel({ children, style }: PanelProps) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors.surface, colors.border, colors.shadow);
+
   return <View style={[styles.panel, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  panel: {
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.md,
-    shadowColor: colors.shadow,
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 4
-    },
-    elevation: 2
-  }
-});
+const createStyles = (backgroundColor: string, borderColor: string, shadowColor: string) =>
+  StyleSheet.create({
+    panel: {
+      borderRadius: 20,
+      backgroundColor,
+      borderWidth: 1,
+      borderColor,
+      padding: spacing.md,
+      shadowColor,
+      shadowOpacity: 0.07,
+      shadowRadius: 8,
+      shadowOffset: {
+        width: 0,
+        height: 4
+      },
+      elevation: 2
+    }
+  });

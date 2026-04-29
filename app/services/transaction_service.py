@@ -2,15 +2,21 @@ from collections import defaultdict
 from datetime import date, datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from threading import Lock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from ..schemas.transaction import CategorySpend, SummaryRead, TransactionCreate, TransactionRead
+from ..schemas.transaction import (
+    CategorySpend,
+    SummaryRead,
+    TransactionCreate,
+    TransactionRead,
+    TransactionUpdate,
+)
 
 
 class TransactionService:
     def __init__(self) -> None:
         self._lock = Lock()
-        self._transactions: list[TransactionRead] = self._seed_data()
+        self._transactions: list[TransactionRead] = []
 
     def list_transactions(self) -> list[TransactionRead]:
         with self._lock:
@@ -33,6 +39,38 @@ class TransactionService:
             self._transactions.insert(0, item)
 
         return item
+
+    def update_transaction(self, transaction_id: UUID, payload: TransactionUpdate) -> TransactionRead | None:
+        with self._lock:
+            index = next((i for i, item in enumerate(self._transactions) if item.id == transaction_id), None)
+
+            if index is None:
+                return None
+
+            current = self._transactions[index]
+            updated = TransactionRead(
+                id=current.id,
+                created_at=current.created_at,
+                title=payload.title,
+                amount=self._normalize_amount(payload.amount),
+                category=payload.category,
+                date=payload.date,
+                kind=payload.kind,
+                notes=payload.notes,
+                is_fixed=payload.is_fixed
+            )
+            self._transactions[index] = updated
+            return updated
+
+    def delete_transaction(self, transaction_id: UUID) -> bool:
+        with self._lock:
+            index = next((i for i, item in enumerate(self._transactions) if item.id == transaction_id), None)
+
+            if index is None:
+                return False
+
+            del self._transactions[index]
+            return True
 
     def get_summary(self, reference_date: date | None = None) -> SummaryRead:
         today = reference_date or date.today()
@@ -75,45 +113,6 @@ class TransactionService:
     @staticmethod
     def _normalize_amount(value: Decimal) -> Decimal:
         return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-
-    def _seed_data(self) -> list[TransactionRead]:
-        today = date.today()
-
-        return [
-            TransactionRead(
-                id=uuid4(),
-                created_at=datetime.now(timezone.utc),
-                title="Salary",
-                amount=Decimal("3200.00"),
-                category="Income",
-                date=today,
-                kind="income",
-                notes="Monthly salary",
-                is_fixed=True
-            ),
-            TransactionRead(
-                id=uuid4(),
-                created_at=datetime.now(timezone.utc),
-                title="Groceries",
-                amount=Decimal("86.42"),
-                category="Food",
-                date=today,
-                kind="expense",
-                notes="Weekly shopping",
-                is_fixed=False
-            ),
-            TransactionRead(
-                id=uuid4(),
-                created_at=datetime.now(timezone.utc),
-                title="Spotify",
-                amount=Decimal("10.99"),
-                category="Subscriptions",
-                date=today,
-                kind="expense",
-                notes="Premium plan",
-                is_fixed=True
-            )
-        ]
 
 
 transaction_service = TransactionService()

@@ -2,7 +2,7 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { ReactNode, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, spacing, typography } from "../theme";
+import { spacing, typography, useAppTheme } from "../theme";
 
 type GateState = "checking" | "locked" | "unlocked";
 
@@ -11,6 +11,8 @@ type BiometricGateProps = {
 };
 
 export function BiometricGate({ children }: BiometricGateProps) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [state, setState] = useState<GateState>("checking");
 
   useEffect(() => {
@@ -72,44 +74,45 @@ export function BiometricGate({ children }: BiometricGateProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: spacing.md,
-    backgroundColor: colors.background,
-    padding: spacing.xl
-  },
-  title: {
-    fontFamily: typography.familyBold,
-    fontSize: typography.sizeXl,
-    color: colors.textPrimary,
-    textAlign: "center"
-  },
-  subtitle: {
-    fontFamily: typography.familyRegular,
-    fontSize: typography.sizeMd,
-    color: colors.textSecondary,
-    textAlign: "center"
-  },
-  button: {
-    minWidth: 180,
-    borderRadius: 14,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.accent,
-    alignItems: "center"
-  },
-  buttonText: {
-    fontFamily: typography.familySemiBold,
-    color: colors.surface,
-    fontSize: typography.sizeMd
-  },
-  skipText: {
-    marginTop: spacing.xs,
-    fontFamily: typography.familyRegular,
-    color: colors.textSecondary,
-    fontSize: typography.sizeSm
-  }
-});
+const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
+  StyleSheet.create({
+    centered: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      gap: spacing.md,
+      backgroundColor: colors.background,
+      padding: spacing.xl
+    },
+    title: {
+      fontFamily: typography.familyBold,
+      fontSize: typography.sizeXl,
+      color: colors.textPrimary,
+      textAlign: "center"
+    },
+    subtitle: {
+      fontFamily: typography.familyRegular,
+      fontSize: typography.sizeMd,
+      color: colors.textSecondary,
+      textAlign: "center"
+    },
+    button: {
+      minWidth: 180,
+      borderRadius: 14,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.accent,
+      alignItems: "center"
+    },
+    buttonText: {
+      fontFamily: typography.familySemiBold,
+      color: colors.surface,
+      fontSize: typography.sizeMd
+    },
+    skipText: {
+      marginTop: spacing.xs,
+      fontFamily: typography.familyRegular,
+      color: colors.textSecondary,
+      fontSize: typography.sizeSm
+    }
+  });

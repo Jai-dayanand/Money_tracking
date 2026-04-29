@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
 
-import { colors, spacing, typography } from "../theme";
+import { spacing, typography, useAppTheme } from "../theme";
 
 type PrimaryButtonProps = {
   onPress: () => void;
@@ -11,6 +11,8 @@ type PrimaryButtonProps = {
 };
 
 export function PrimaryButton({ onPress, children, disabled, loading }: PrimaryButtonProps) {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors.accent, colors.surface);
   const isDisabled = disabled || loading;
 
   return (
@@ -29,22 +31,23 @@ export function PrimaryButton({ onPress, children, disabled, loading }: PrimaryB
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    width: "100%",
-    minHeight: 52,
-    borderRadius: 14,
-    backgroundColor: colors.accent,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: spacing.lg
-  },
-  buttonDisabled: {
-    opacity: 0.65
-  },
-  label: {
-    fontFamily: typography.familySemiBold,
-    color: colors.surface,
-    fontSize: typography.sizeMd
-  }
-});
+const createStyles = (backgroundColor: string, textColor: string) =>
+  StyleSheet.create({
+    button: {
+      width: "100%",
+      minHeight: 52,
+      borderRadius: 14,
+      backgroundColor,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: spacing.lg
+    },
+    buttonDisabled: {
+      opacity: 0.65
+    },
+    label: {
+      fontFamily: typography.familySemiBold,
+      color: textColor,
+      fontSize: typography.sizeMd
+    }
+  });

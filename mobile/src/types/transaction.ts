@@ -21,6 +21,8 @@ export type CreateTransactionPayload = {
   isFixed: boolean;
 };
 
+export type UpdateTransactionPayload = CreateTransactionPayload;
+
 export type CategorySpend = {
   category: string;
   amount: number;

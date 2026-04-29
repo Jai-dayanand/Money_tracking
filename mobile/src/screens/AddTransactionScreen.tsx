@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { z } from "zod";
 
 import { Panel } from "../components/Panel";
@@ -9,35 +9,64 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { TextField } from "../components/TextField";
 import { useCreateTransaction } from "../hooks/useTransactions";
-import { colors, spacing, typography } from "../theme";
+import { spacing, typography, useAppTheme } from "../theme";
 
 const transactionSchema = z.object({
-  title: z.string().min(2, "Title is too short"),
   amount: z.coerce.number().positive("Amount must be greater than zero"),
   category: z.string().min(2, "Category is required"),
-  date: z.string().min(8, "Use a valid date"),
-  notes: z.string().max(140, "Keep notes under 140 chars").optional(),
-  kind: z.enum(["income", "expense"]),
-  isFixed: z.boolean()
+  notes: z.string().max(140, "Keep notes under 140 chars").optional()
 });
 
 type TransactionFormValues = z.infer<typeof transactionSchema>;
+type EntryMode = "expense" | "income";
 
-const today = new Date().toISOString().slice(0, 10);
+const expenseCategories = [
+  "Food",
+  "Transport",
+  "Bills",
+  "Rent",
+  "Shopping",
+  "Health",
+  "Education",
+  "Entertainment",
+  "Travel",
+  "Subscriptions",
+  "Other Expense"
+];
+
+const incomeCategories = [
+  "Salary",
+  "Freelance",
+  "Business",
+  "Bonus",
+  "Investment",
+  "Gift",
+  "Refund",
+  "Other Income"
+];
+
+function getLocalDateString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 export function AddTransactionScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const mutation = useCreateTransaction();
   const [successMessage, setSuccessMessage] = useState("");
+  const [mode, setMode] = useState<EntryMode>("expense");
+  const [isCategoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
   const defaultValues = useMemo<TransactionFormValues>(
     () => ({
-      title: "",
       amount: 0,
       category: "",
-      date: today,
-      notes: "",
-      kind: "expense",
-      isFixed: false
+      notes: ""
     }),
     []
   );
@@ -46,52 +75,67 @@ export function AddTransactionScreen() {
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors }
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionSchema),
     defaultValues
   });
 
+  const categoryOptions = mode === "expense" ? expenseCategories : incomeCategories;
+  const selectedCategory = watch("category");
+
+  useEffect(() => {
+    setSuccessMessage("");
+    const current = watch("category");
+
+    if (!current || !categoryOptions.includes(current)) {
+      setValue("category", categoryOptions[0] ?? "", { shouldValidate: true });
+    }
+  }, [mode, setValue, watch, categoryOptions]);
+
   const onSubmit = handleSubmit(async (values) => {
     setSuccessMessage("");
 
     await mutation.mutateAsync({
-      title: values.title.trim(),
+      title: values.category.trim(),
       amount: values.amount,
       category: values.category.trim(),
-      date: values.date,
-      kind: values.kind,
+      date: getLocalDateString(),
+      kind: mode,
       notes: values.notes?.trim() ? values.notes.trim() : undefined,
-      isFixed: values.isFixed
+      isFixed: false
     });
 
-    setSuccessMessage("Transaction saved successfully.");
-    reset(defaultValues);
+    setSuccessMessage(`${mode === "expense" ? "Expense" : "Income"} saved successfully.`);
+    reset({ ...defaultValues, category: categoryOptions[0] ?? "" });
   });
 
   return (
     <Screen>
       <View style={styles.header}>
         <Text style={styles.title}>Quick add</Text>
-        <Text style={styles.subtitle}>Log an income or expense in under 20 seconds.</Text>
+        <Text style={styles.subtitle}>Minimal entry: amount, category, note.</Text>
       </View>
 
       <Panel style={styles.form}>
-        <Controller
-          control={control}
-          name="title"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextField
-              label="Title"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="Groceries, Salary, Uber..."
-              error={errors.title?.message}
-              returnKeyType="next"
-            />
-          )}
-        />
+        <View style={styles.modeRow}>
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.modeChip, mode === "expense" ? styles.modeChipActive : undefined]}
+            onPress={() => setMode("expense")}
+          >
+            <Text style={[styles.modeText, mode === "expense" ? styles.modeTextActive : undefined]}>Expense</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.modeChip, mode === "income" ? styles.modeChipActive : undefined]}
+            onPress={() => setMode("income")}
+          >
+            <Text style={[styles.modeText, mode === "income" ? styles.modeTextActive : undefined]}>Income</Text>
+          </Pressable>
+        </View>
 
         <Controller
           control={control}
@@ -112,31 +156,57 @@ export function AddTransactionScreen() {
         <Controller
           control={control}
           name="category"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextField
-              label="Category"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="Food, Transport, Bills..."
-              error={errors.category?.message}
-            />
-          )}
-        />
+          render={({ field: { onChange } }) => (
+            <View style={styles.categoryWrap}>
+              <Text style={styles.categoryLabel}>Category</Text>
+              <Pressable accessibilityRole="button" style={styles.categoryTrigger} onPress={() => setCategoryPickerOpen(true)}>
+                <Text style={styles.categoryText}>{selectedCategory || "Select category"}</Text>
+                <Text style={styles.dropdownArrow}>⌄</Text>
+              </Pressable>
+              {errors.category?.message ? <Text style={styles.errorText}>{errors.category.message}</Text> : null}
 
-        <Controller
-          control={control}
-          name="date"
-          render={({ field: { value, onChange, onBlur } }) => (
-            <TextField
-              label="Date (YYYY-MM-DD)"
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-              placeholder="2026-04-25"
-              autoCapitalize="none"
-              error={errors.date?.message}
-            />
+              <Modal
+                visible={isCategoryPickerOpen}
+                animationType="fade"
+                transparent
+                onRequestClose={() => setCategoryPickerOpen(false)}
+              >
+                <View style={styles.modalBackdrop}>
+                  <View style={styles.modalCard}>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Select {mode} category</Text>
+                      <Pressable accessibilityRole="button" onPress={() => setCategoryPickerOpen(false)}>
+                        <Text style={styles.closeText}>Close</Text>
+                      </Pressable>
+                    </View>
+
+                    <FlatList
+                      data={categoryOptions}
+                      keyExtractor={(item) => item}
+                      keyboardShouldPersistTaps="handled"
+                      showsVerticalScrollIndicator={false}
+                      contentContainerStyle={styles.categoryList}
+                      renderItem={({ item }) => {
+                        const active = item === selectedCategory;
+
+                        return (
+                          <Pressable
+                            accessibilityRole="button"
+                            style={[styles.categoryItem, active ? styles.categoryItemActive : undefined]}
+                            onPress={() => {
+                              onChange(item);
+                              setCategoryPickerOpen(false);
+                            }}
+                          >
+                            <Text style={[styles.categoryItemText, active ? styles.categoryItemTextActive : undefined]}>{item}</Text>
+                          </Pressable>
+                        );
+                      }}
+                    />
+                  </View>
+                </View>
+              </Modal>
+            </View>
           )}
         />
 
@@ -145,44 +215,18 @@ export function AddTransactionScreen() {
           name="notes"
           render={({ field: { value, onChange, onBlur } }) => (
             <TextField
-              label="Notes (optional)"
+              label="Note (optional)"
               value={value ?? ""}
               onChangeText={onChange}
               onBlur={onBlur}
-              placeholder="Any context for this transaction"
+              placeholder="Any context for this entry"
               error={errors.notes?.message}
             />
           )}
         />
 
-        <Controller
-          control={control}
-          name="kind"
-          render={({ field: { value, onChange } }) => (
-            <View style={styles.segmentRow}>
-              <Segment label="Expense" active={value === "expense"} onPress={() => onChange("expense")} />
-              <Segment label="Income" active={value === "income"} onPress={() => onChange("income")} />
-            </View>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="isFixed"
-          render={({ field: { value, onChange } }) => (
-            <Pressable accessibilityRole="button" style={styles.toggleRow} onPress={() => onChange(!value)}>
-              <Text style={styles.toggleLabel}>Recurring / fixed transaction</Text>
-              <View style={[styles.toggleBadge, value ? styles.toggleOn : undefined]}>
-                <Text style={[styles.toggleBadgeText, value ? styles.toggleBadgeTextOn : undefined]}>
-                  {value ? "Yes" : "No"}
-                </Text>
-              </View>
-            </Pressable>
-          )}
-        />
-
         <PrimaryButton onPress={() => void onSubmit()} loading={mutation.isPending}>
-          Save transaction
+          Save
         </PrimaryButton>
 
         {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
@@ -191,101 +235,145 @@ export function AddTransactionScreen() {
   );
 }
 
-type SegmentProps = {
-  label: string;
-  active: boolean;
-  onPress: () => void;
-};
-
-function Segment({ label, active, onPress }: SegmentProps) {
-  return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={[styles.segment, active ? styles.segmentActive : undefined]}>
-      <Text style={[styles.segmentLabel, active ? styles.segmentLabelActive : undefined]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  header: {
-    gap: spacing.xxs
-  },
-  title: {
-    fontFamily: typography.familyBold,
-    fontSize: typography.sizeXl,
-    color: colors.textPrimary
-  },
-  subtitle: {
-    fontFamily: typography.familyRegular,
-    fontSize: typography.sizeSm,
-    color: colors.textSecondary
-  },
-  form: {
-    gap: spacing.sm,
-    marginBottom: spacing.xl
-  },
-  segmentRow: {
-    flexDirection: "row",
-    gap: spacing.sm
-  },
-  segment: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    backgroundColor: colors.panel
-  },
-  segmentActive: {
-    borderColor: colors.accent,
-    backgroundColor: colors.accentSoft
-  },
-  segmentLabel: {
-    fontFamily: typography.familySemiBold,
-    fontSize: typography.sizeSm,
-    color: colors.textSecondary
-  },
-  segmentLabelActive: {
-    color: colors.accent
-  },
-  toggleRow: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
-  },
-  toggleLabel: {
-    fontFamily: typography.familyRegular,
-    color: colors.textPrimary,
-    fontSize: typography.sizeSm
-  },
-  toggleBadge: {
-    minWidth: 48,
-    borderRadius: 999,
-    backgroundColor: colors.panel,
-    alignItems: "center",
-    paddingVertical: 4,
-    paddingHorizontal: spacing.xs
-  },
-  toggleOn: {
-    backgroundColor: colors.accent
-  },
-  toggleBadgeText: {
-    fontFamily: typography.familySemiBold,
-    fontSize: typography.sizeSm,
-    color: colors.textSecondary
-  },
-  toggleBadgeTextOn: {
-    color: colors.surface
-  },
-  success: {
-    fontFamily: typography.familyRegular,
-    color: colors.accent,
-    fontSize: typography.sizeSm,
-    textAlign: "center"
-  }
-});
+const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
+  StyleSheet.create({
+    header: {
+      gap: spacing.xxs
+    },
+    title: {
+      fontFamily: typography.familyBold,
+      fontSize: typography.sizeXl,
+      color: colors.textPrimary
+    },
+    subtitle: {
+      fontFamily: typography.familyRegular,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary
+    },
+    form: {
+      gap: spacing.sm,
+      marginBottom: spacing.xl
+    },
+    modeRow: {
+      flexDirection: "row",
+      gap: spacing.sm
+    },
+    modeChip: {
+      flex: 1,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.panel,
+      paddingVertical: spacing.sm,
+      alignItems: "center"
+    },
+    modeChipActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accentSoft
+    },
+    modeText: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary
+    },
+    modeTextActive: {
+      color: colors.accent
+    },
+    categoryWrap: {
+      gap: spacing.xs
+    },
+    categoryLabel: {
+      fontFamily: typography.familySemiBold,
+      color: colors.textPrimary,
+      fontSize: typography.sizeSm
+    },
+    categoryTrigger: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      minHeight: 48,
+      paddingHorizontal: spacing.sm,
+      backgroundColor: colors.surface,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    categoryText: {
+      fontFamily: typography.familyRegular,
+      color: colors.textPrimary,
+      fontSize: typography.sizeMd,
+      flex: 1
+    },
+    dropdownArrow: {
+      fontFamily: typography.familySemiBold,
+      color: colors.textSecondary,
+      fontSize: typography.sizeMd,
+      marginLeft: spacing.sm
+    },
+    errorText: {
+      fontFamily: typography.familyRegular,
+      color: colors.danger,
+      fontSize: typography.sizeXs
+    },
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.28)",
+      justifyContent: "center",
+      padding: spacing.lg
+    },
+    modalCard: {
+      maxHeight: "74%",
+      borderRadius: 16,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.md,
+      gap: spacing.sm
+    },
+    modalHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center"
+    },
+    modalTitle: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeMd,
+      color: colors.textPrimary
+    },
+    closeText: {
+      fontFamily: typography.familyRegular,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary
+    },
+    categoryList: {
+      gap: spacing.xs,
+      paddingBottom: spacing.xs
+    },
+    categoryItem: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      backgroundColor: colors.panel
+    },
+    categoryItemActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accentSoft
+    },
+    categoryItemText: {
+      fontFamily: typography.familyRegular,
+      fontSize: typography.sizeSm,
+      color: colors.textPrimary
+    },
+    categoryItemTextActive: {
+      color: colors.accent,
+      fontFamily: typography.familySemiBold
+    },
+    success: {
+      fontFamily: typography.familyRegular,
+      color: colors.accent,
+      fontSize: typography.sizeSm,
+      textAlign: "center"
+    }
+  });

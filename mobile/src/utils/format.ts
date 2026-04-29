@@ -3,15 +3,28 @@ const hasIntl =
   typeof Intl.NumberFormat === "function" &&
   typeof Intl.DateTimeFormat === "function";
 
-export function formatCurrency(value: number) {
+const localeByCurrency: Record<string, string> = {
+  USD: "en-US",
+  INR: "en-IN",
+  EUR: "de-DE",
+  GBP: "en-GB",
+  AED: "en-AE"
+};
+
+export function formatCurrency(value: number, currency = "USD") {
   const amount = Number.isFinite(value) ? value : 0;
+  const normalizedCurrency = currency.trim().toUpperCase();
 
   if (hasIntl) {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 2
-    }).format(amount);
+    try {
+      return new Intl.NumberFormat(localeByCurrency[normalizedCurrency] ?? "en-US", {
+        style: "currency",
+        currency: normalizedCurrency,
+        maximumFractionDigits: 2
+      }).format(amount);
+    } catch {
+      // Fallback for unsupported/invalid currency codes.
+    }
   }
 
   const sign = amount < 0 ? "-" : "";
@@ -19,7 +32,7 @@ export function formatCurrency(value: number) {
   const [whole, fraction] = absolute.toFixed(2).split(".");
   const withCommas = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
-  return `${sign}$${withCommas}.${fraction}`;
+  return `${sign}${normalizedCurrency} ${withCommas}.${fraction}`;
 }
 
 export function formatShortDate(value: string) {
@@ -43,7 +56,7 @@ export function formatShortDate(value: string) {
   return monthLabel ? `${monthLabel} ${day}` : value;
 }
 
-export function getMonthGreeting() {
+export function getTimeGreeting() {
   const hour = new Date().getHours();
 
   if (hour < 12) {

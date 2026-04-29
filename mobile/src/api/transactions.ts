@@ -1,4 +1,4 @@
-import { CreateTransactionPayload, Summary, Transaction } from "../types/transaction";
+import { CreateTransactionPayload, Summary, Transaction, UpdateTransactionPayload } from "../types/transaction";
 import { http } from "./http";
 
 type ServerTransaction = {
@@ -19,40 +19,7 @@ type ServerSummary = {
   top_categories: Array<{ category: string; amount: number }>;
 };
 
-const fallbackTransactions: Transaction[] = [
-  {
-    id: "1",
-    title: "Salary",
-    amount: 3200,
-    category: "Income",
-    date: new Date().toISOString(),
-    kind: "income",
-    notes: "Monthly salary",
-    isFixed: true
-  },
-  {
-    id: "2",
-    title: "Groceries",
-    amount: 86.42,
-    category: "Food",
-    date: new Date().toISOString(),
-    kind: "expense",
-    notes: "Weekly shopping",
-    isFixed: false
-  },
-  {
-    id: "3",
-    title: "Spotify",
-    amount: 10.99,
-    category: "Subscriptions",
-    date: new Date().toISOString(),
-    kind: "expense",
-    notes: "Premium plan",
-    isFixed: true
-  }
-];
-
-let fallbackStore = [...fallbackTransactions];
+let fallbackStore: Transaction[] = [];
 
 function createLocalId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -147,5 +114,42 @@ export async function getSummary(): Promise<Summary> {
     };
   } catch {
     return buildFallbackSummary(fallbackStore);
+  }
+}
+
+export async function updateTransaction(transactionId: string, payload: UpdateTransactionPayload): Promise<Transaction> {
+  try {
+    const data = await http<ServerTransaction>(`/api/v1/transactions/${transactionId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        title: payload.title,
+        amount: payload.amount,
+        category: payload.category,
+        date: payload.date,
+        kind: payload.kind,
+        notes: payload.notes,
+        is_fixed: payload.isFixed
+      })
+    });
+
+    return mapServerTransaction(data);
+  } catch {
+    const updated: Transaction = {
+      ...payload,
+      id: transactionId
+    };
+
+    fallbackStore = fallbackStore.map((item) => (item.id === transactionId ? updated : item));
+    return updated;
+  }
+}
+
+export async function deleteTransaction(transactionId: string): Promise<void> {
+  try {
+    await http<unknown>(`/api/v1/transactions/${transactionId}`, {
+      method: "DELETE"
+    });
+  } catch {
+    fallbackStore = fallbackStore.filter((item) => item.id !== transactionId);
   }
 }

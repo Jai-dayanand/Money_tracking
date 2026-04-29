@@ -29,6 +29,10 @@ class TransactionCreate(TransactionBase):
   pass
 
 
+class TransactionUpdate(TransactionBase):
+  pass
+
+
 class TransactionRead(TransactionBase):
   id: UUID
   created_at: datetime

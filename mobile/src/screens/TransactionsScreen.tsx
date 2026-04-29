@@ -5,12 +5,14 @@ import { Panel } from "../components/Panel";
 import { Screen } from "../components/Screen";
 import { TransactionRow } from "../components/TransactionRow";
 import { useTransactions } from "../hooks/useTransactions";
+import { spacing, typography, useAppTheme } from "../theme";
 import { Transaction } from "../types/transaction";
-import { colors, spacing, typography } from "../theme";
 
 type Filter = "all" | "income" | "expense";
 
 export function TransactionsScreen() {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const { data, isLoading, refetch } = useTransactions();
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -62,6 +64,14 @@ export function TransactionsScreen() {
       )}
     </Screen>
   );
+
+  function FilterChip({ label, active, onPress }: FilterChipProps) {
+    return (
+      <Pressable accessibilityRole="button" style={[styles.chip, active ? styles.chipActive : undefined]} onPress={onPress}>
+        <Text style={[styles.chipText, active ? styles.chipTextActive : undefined]}>{label}</Text>
+      </Pressable>
+    );
+  }
 }
 
 type FilterChipProps = {
@@ -70,60 +80,53 @@ type FilterChipProps = {
   onPress: () => void;
 };
 
-function FilterChip({ label, active, onPress }: FilterChipProps) {
-  return (
-    <Pressable accessibilityRole="button" style={[styles.chip, active ? styles.chipActive : undefined]} onPress={onPress}>
-      <Text style={[styles.chipText, active ? styles.chipTextActive : undefined]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  header: {
-    gap: spacing.xxs,
-    marginBottom: spacing.md
-  },
-  title: {
-    fontFamily: typography.familyBold,
-    fontSize: typography.sizeXl,
-    color: colors.textPrimary
-  },
-  subtitle: {
-    fontFamily: typography.familyRegular,
-    fontSize: typography.sizeSm,
-    color: colors.textSecondary
-  },
-  filters: {
-    flexDirection: "row",
-    gap: spacing.xs,
-    marginBottom: spacing.md
-  },
-  chip: {
-    borderRadius: 999,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.border
-  },
-  chipActive: {
-    backgroundColor: colors.accentSoft,
-    borderColor: colors.accent
-  },
-  chipText: {
-    fontFamily: typography.familySemiBold,
-    fontSize: typography.sizeSm,
-    color: colors.textSecondary
-  },
-  chipTextActive: {
-    color: colors.accent
-  },
-  listContent: {
-    paddingBottom: 120
-  },
-  emptyText: {
-    fontFamily: typography.familyRegular,
-    color: colors.textSecondary,
-    fontSize: typography.sizeSm
-  }
-});
+const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
+  StyleSheet.create({
+    header: {
+      gap: spacing.xxs,
+      marginBottom: spacing.md
+    },
+    title: {
+      fontFamily: typography.familyBold,
+      fontSize: typography.sizeXl,
+      color: colors.textPrimary
+    },
+    subtitle: {
+      fontFamily: typography.familyRegular,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary
+    },
+    filters: {
+      flexDirection: "row",
+      gap: spacing.xs,
+      marginBottom: spacing.md
+    },
+    chip: {
+      borderRadius: 999,
+      paddingVertical: spacing.xs,
+      paddingHorizontal: spacing.md,
+      backgroundColor: colors.panel,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    chipActive: {
+      backgroundColor: colors.accentSoft,
+      borderColor: colors.accent
+    },
+    chipText: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary
+    },
+    chipTextActive: {
+      color: colors.accent
+    },
+    listContent: {
+      paddingBottom: 120
+    },
+    emptyText: {
+      fontFamily: typography.familyRegular,
+      color: colors.textSecondary,
+      fontSize: typography.sizeSm
+    }
+  });
