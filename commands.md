@@ -42,7 +42,7 @@ npm i
 
 ```powershell
 cd mobile
-npm run start
+npm run start / npm expo start -c
 ```
 
 ## 5) API URL for Emulator/Device

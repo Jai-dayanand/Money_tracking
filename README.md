@@ -89,7 +89,7 @@ uvicorn app.main:app --reload --port 8000
 cd mobile
 cp .env.example .env
 npm install
-npm run start
+npm run start / npm expo start -c
 ```
 
 If you are using an Android emulator, set `EXPO_PUBLIC_API_URL` to `http://10.0.2.2:8000`.
