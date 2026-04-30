@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+// insights screen
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Panel } from "../components/Panel";
@@ -19,6 +20,9 @@ type ActivityPoint = {
 };
 
 const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Curated distinct palette for donut segments
+const DONUT_COLORS = ["#0F7A63", "#C88A22", "#B94A48", "#3B7DD8", "#8B5CF6", "#D97706"];
 
 function toLocalDateKey(value: Date) {
   const year = value.getFullYear();
@@ -101,6 +105,16 @@ export function InsightsScreen() {
   const { data: transactions, isLoading: transactionsLoading } = useTransactions();
 
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+  const [visibleTooltipKey, setVisibleTooltipKey] = useState<string | null>(null);
+  const tooltipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (tooltipTimerRef.current) {
+        clearTimeout(tooltipTimerRef.current);
+      }
+    };
+  }, []);
 
   const topSpends = summary?.topCategories ?? [];
 
@@ -109,6 +123,7 @@ export function InsightsScreen() {
       .filter((item) => item.kind === "expense")
       .slice(0, 5)
       .map((item) => ({
+        id: item.id,
         date: formatShortDate(item.date),
         amount: item.amount
       }));
@@ -224,21 +239,42 @@ export function InsightsScreen() {
               </View>
             </View>
             <View style={styles.chartArea}>
-              {weeklyActivity.map((item) => {
+              {weeklyActivity.map((item, index) => {
                 const incomeHeight = item.income > 0 ? Math.max(8, (item.income / weeklyMaxValue) * 92) : 2;
                 const expenseHeight = item.expense > 0 ? Math.max(8, (item.expense / weeklyMaxValue) * 92) : 2;
                 const selected = item.key === selectedDay?.key;
                 const tooltipBottom = 24 + Math.max(incomeHeight, expenseHeight) + 10;
+                const totalBars = weeklyActivity.length;
+
+                // Align tooltip to avoid screen edges:
+                // first 2 bars → left-align, last 2 bars → right-align, rest → center
+                let tooltipStyle: object;
+                if (index <= 1) {
+                  tooltipStyle = { left: 0 };
+                } else if (index >= totalBars - 2) {
+                  tooltipStyle = { right: 0 };
+                } else {
+                  tooltipStyle = { left: "50%", transform: [{ translateX: -62 }] };
+                }
 
                 return (
                   <Pressable
                     key={item.key}
                     accessibilityRole="button"
-                    onPress={() => setSelectedDayKey(item.key)}
+                    onPress={() => {
+                      setSelectedDayKey(item.key);
+                      setVisibleTooltipKey(item.key);
+                      if (tooltipTimerRef.current) {
+                        clearTimeout(tooltipTimerRef.current);
+                      }
+                      tooltipTimerRef.current = setTimeout(() => {
+                        setVisibleTooltipKey(null);
+                      }, 1500);
+                    }}
                     style={styles.chartColumn}
                   >
-                    {selected ? (
-                      <View style={[styles.barTooltip, { bottom: tooltipBottom }]}>
+                    {visibleTooltipKey === item.key ? (
+                      <View style={[styles.barTooltip, { bottom: tooltipBottom }, tooltipStyle]}>
                         <Text style={styles.barTooltipDate}>{formatDayLabel(item.key)}</Text>
                         <Text style={styles.barTooltipIncome}>In {formatCurrency(item.income, currency)}</Text>
                         <Text style={styles.barTooltipExpense}>Out {formatCurrency(item.expense, currency)}</Text>
@@ -264,26 +300,56 @@ export function InsightsScreen() {
         {summaryLoading ? (
           <Text style={styles.placeholder}>Loading category spend...</Text>
         ) : topSpends.length > 0 ? (
-          <View style={styles.barsWrap}>
-            {topSpends.map((item) => {
-              const max = topSpends[0]?.amount ?? 1;
-              const ratio = item.amount / max;
-
-              return (
-                <View key={item.category} style={styles.barItem}>
-                  <View style={styles.barLabelRow}>
-                    <Text style={styles.barLabel}>{item.category}</Text>
-                    <Text style={styles.barAmount} numberOfLines={1}>
-                      {formatCurrency(item.amount, currency)}
-                    </Text>
-                  </View>
-                  <View style={styles.barTrack}>
-                    <View style={[styles.barFill, { width: `${Math.max(8, ratio * 100)}%` }]} />
-                  </View>
+          (() => {
+            const total = topSpends.reduce((s, x) => s + x.amount, 0);
+            return (
+              <View style={styles.categoryViz}>
+                {/* Segmented proportion strip */}
+                <View style={styles.segmentStrip}>
+                  {topSpends.map((item, i) => {
+                    const pct = item.amount / total;
+                    const color = DONUT_COLORS[i % DONUT_COLORS.length] ?? "#999";
+                    const isFirst = i === 0;
+                    const isLast = i === topSpends.length - 1;
+                    return (
+                      <View
+                        key={item.category}
+                        style={{
+                          flex: pct,
+                          height: "100%",
+                          backgroundColor: color,
+                          borderTopLeftRadius: isFirst ? 999 : 0,
+                          borderBottomLeftRadius: isFirst ? 999 : 0,
+                          borderTopRightRadius: isLast ? 999 : 0,
+                          borderBottomRightRadius: isLast ? 999 : 0
+                        }}
+                      />
+                    );
+                  })}
                 </View>
-              );
-            })}
-          </View>
+
+                {/* Legend grid */}
+                <View style={styles.categoryLegendGrid}>
+                  {topSpends.map((item, i) => {
+                    const pct = item.amount / total;
+                    const color = DONUT_COLORS[i % DONUT_COLORS.length] ?? "#999";
+                    return (
+                      <View key={item.category} style={styles.categoryLegendItem}>
+                        <View style={styles.categoryLegendTop}>
+                          <View style={[styles.categoryDot, { backgroundColor: color }]} />
+                          <Text style={styles.categoryLegendName} numberOfLines={1}>{item.category}</Text>
+                          <Text style={[styles.categoryLegendPct, { color }]}>{Math.round(pct * 100)}%</Text>
+                        </View>
+                        <Text style={styles.categoryLegendAmt} numberOfLines={1}>
+                          {formatCurrency(item.amount, currency)}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            );
+          })()
         ) : (
           <Text style={styles.placeholder}>No expense data yet.</Text>
         )}
@@ -296,7 +362,7 @@ export function InsightsScreen() {
         ) : recentExpenseFlow.length > 0 ? (
           <View style={styles.flowList}>
             {recentExpenseFlow.map((item) => (
-              <View key={`${item.date}-${item.amount}`} style={styles.flowRow}>
+              <View key={item.id} style={styles.flowRow}>
                 <Text style={styles.flowDate}>{item.date}</Text>
                 <Text style={styles.flowAmount}>{formatCurrency(item.amount, currency)}</Text>
               </View>
@@ -452,8 +518,6 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
     },
     barTooltip: {
       position: "absolute",
-      left: "50%",
-      transform: [{ translateX: -62 }],
       width: 124,
       borderRadius: 10,
       borderWidth: 1,
@@ -479,39 +543,48 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
       fontSize: typography.sizeXs,
       color: colors.danger
     },
-    barsWrap: {
-      gap: spacing.sm
+    categoryViz: {
+      gap: spacing.md
     },
-    barItem: {
-      gap: spacing.xxs
-    },
-    barLabelRow: {
+    segmentStrip: {
       flexDirection: "row",
-      justifyContent: "space-between",
-      gap: spacing.sm
+      height: 14,
+      borderRadius: 999,
+      overflow: "hidden",
+      gap: 2
     },
-    barLabel: {
+    categoryLegendGrid: {
+      gap: spacing.xs
+    },
+    categoryLegendItem: {
+      gap: 2
+    },
+    categoryLegendTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs
+    },
+    categoryDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 999,
+      flexShrink: 0
+    },
+    categoryLegendName: {
+      flex: 1,
       fontFamily: typography.familyRegular,
       fontSize: typography.sizeSm,
-      color: colors.textPrimary,
-      flex: 1
+      color: colors.textPrimary
     },
-    barAmount: {
+    categoryLegendPct: {
       fontFamily: typography.familySemiBold,
-      fontSize: typography.sizeSm,
+      fontSize: typography.sizeSm
+    },
+    categoryLegendAmt: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeXs,
       color: colors.textSecondary,
-      maxWidth: "55%"
-    },
-    barTrack: {
-      height: 8,
-      borderRadius: 999,
-      backgroundColor: colors.chartBase,
-      overflow: "hidden"
-    },
-    barFill: {
-      height: "100%",
-      borderRadius: 999,
-      backgroundColor: colors.accent
+      paddingLeft: 18
     },
     flowList: {
       gap: spacing.xs

@@ -1,8 +1,11 @@
+import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import { useMemo, useState } from "react";
 import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,7 +18,7 @@ import { Screen } from "../components/Screen";
 import { TextField } from "../components/TextField";
 import { useDeleteTransaction, useTransactions, useUpdateTransaction } from "../hooks/useTransactions";
 import { usePreferences } from "../preferences";
-import { ThemeMode, spacing, typography, useAppTheme } from "../theme";
+import { spacing, typography, useAppTheme } from "../theme";
 import { Transaction, TransactionKind } from "../types/transaction";
 import { formatCurrency, formatShortDate } from "../utils/format";
 
@@ -43,14 +46,9 @@ function toEditableRecord(item: Transaction): EditableRecord {
   };
 }
 
-const themeOptions: Array<{ mode: ThemeMode; label: string }> = [
-  { mode: "light", label: "Light" },
-  { mode: "dark", label: "Dark" },
-  { mode: "system", label: "System default" }
-];
 
 export function ProfileScreen() {
-  const { colors, themeMode, setThemeMode } = useAppTheme();
+  const { colors, isDark, toggleTheme } = useAppTheme();
   const styles = createStyles(colors);
   const { currency, currencyOptions, setCurrency } = usePreferences();
   const { data: records, isLoading } = useTransactions();
@@ -141,195 +139,208 @@ export function ProfileScreen() {
             <Text style={styles.dropdownCode}>{currency}</Text>
             <Text style={styles.dropdownLabel}>{activeCurrency?.label ?? "Selected currency"}</Text>
           </View>
-          <Text style={styles.dropdownArrow}>⌄</Text>
+          <Feather name="chevron-down" size={18} color={colors.textSecondary} style={{ marginLeft: spacing.sm }} />
         </Pressable>
       </Panel>
 
       <Panel style={styles.section}>
         <Text style={styles.sectionTitle}>Manage records</Text>
         <Text style={styles.sectionHint}>Edit or delete transactions from one place.</Text>
-        <PrimaryButton onPress={() => setManageVisible(true)}>Manage records</PrimaryButton>
+        <PrimaryButton disabled={isLoading || (records ?? []).length === 0} onPress={() => setManageVisible(true)}>Manage records</PrimaryButton>
       </Panel>
 
       <Panel style={styles.section}>
-        <Text style={styles.sectionTitle}>Theme</Text>
-        <Text style={styles.sectionHint}>Choose appearance mode.</Text>
-        <View style={styles.themeRow}>
-          {themeOptions.map((option) => {
-            const active = option.mode === themeMode;
-
-            return (
-              <Pressable
-                key={option.mode}
-                accessibilityRole="button"
-                style={[styles.themeChip, active ? styles.themeChipActive : undefined]}
-                onPress={() => setThemeMode(option.mode)}
-              >
-                <Text style={[styles.themeChipText, active ? styles.themeChipTextActive : undefined]}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
+        <View style={styles.themePanelRow}>
+          <View style={styles.themePanelLeft}>
+            <Text style={styles.sectionTitle}>Theme</Text>
+            <Text style={styles.sectionHint}>{isDark ? "Dark mode" : "Light mode"}</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.themeToggleBtn, isDark ? styles.themeToggleBtnDark : undefined]}
+            onPress={toggleTheme}
+          >
+            <Feather
+              name={isDark ? "moon" : "sun"}
+              size={16}
+              color={isDark ? colors.accent : colors.textSecondary}
+            />
+            <Text style={[styles.themeToggleLabel, isDark ? styles.themeToggleLabelDark : undefined]}>
+              {isDark ? "Dark" : "Light"}
+            </Text>
+          </Pressable>
         </View>
       </Panel>
 
       <Modal visible={isPickerVisible} animationType="fade" transparent onRequestClose={() => setPickerVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select currency</Text>
-              <Pressable accessibilityRole="button" onPress={() => setPickerVisible(false)}>
-                <Text style={styles.closeText}>Close</Text>
-              </Pressable>
+        <View style={{ flex: 1 }}>
+          <BlurView intensity={85} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setPickerVisible(false)} />
+          <View style={styles.modalBackdrop} pointerEvents="box-none">
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select currency</Text>
+                <Pressable accessibilityRole="button" onPress={() => setPickerVisible(false)}>
+                  <Text style={styles.closeText}>Close</Text>
+                </Pressable>
+              </View>
+
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Search by code or name"
+                placeholderTextColor={colors.textSecondary}
+                style={styles.searchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <FlatList
+                data={filteredCurrencies}
+                keyExtractor={(item) => item.code}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.listContent}
+                ListEmptyComponent={<Text style={styles.emptyText}>No currency found for your search.</Text>}
+                renderItem={({ item }) => {
+                  const active = item.code === currency;
+
+                  return (
+                    <Pressable
+                      accessibilityRole="button"
+                      style={[styles.currencyRow, active ? styles.currencyRowActive : undefined]}
+                      onPress={() => onSelectCurrency(item.code)}
+                    >
+                      <Text style={[styles.currencyCode, active ? styles.currencyCodeActive : undefined]}>{item.code}</Text>
+                      <Text style={styles.currencyLabel}>{item.label}</Text>
+                    </Pressable>
+                  );
+                }}
+              />
             </View>
-
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Search by code or name"
-              placeholderTextColor={colors.textSecondary}
-              style={styles.searchInput}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-
-            <FlatList
-              data={filteredCurrencies}
-              keyExtractor={(item) => item.code}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-              ListEmptyComponent={<Text style={styles.emptyText}>No currency found for your search.</Text>}
-              renderItem={({ item }) => {
-                const active = item.code === currency;
-
-                return (
-                  <Pressable
-                    accessibilityRole="button"
-                    style={[styles.currencyRow, active ? styles.currencyRowActive : undefined]}
-                    onPress={() => onSelectCurrency(item.code)}
-                  >
-                    <Text style={[styles.currencyCode, active ? styles.currencyCodeActive : undefined]}>{item.code}</Text>
-                    <Text style={styles.currencyLabel}>{item.label}</Text>
-                  </Pressable>
-                );
-              }}
-            />
           </View>
         </View>
       </Modal>
 
-      <Modal visible={isManageVisible} animationType="slide" transparent onRequestClose={() => setManageVisible(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCardLarge}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Manage records</Text>
-              <Pressable accessibilityRole="button" onPress={() => setManageVisible(false)}>
-                <Text style={styles.closeText}>Close</Text>
-              </Pressable>
-            </View>
+      <Modal visible={isManageVisible} animationType="fade" transparent onRequestClose={() => setManageVisible(false)}>
+        <View style={{ flex: 1 }}>
+          <BlurView intensity={85} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setManageVisible(false)} />
+          <View style={styles.modalBackdrop} pointerEvents="box-none">
+            <View style={styles.modalCardLarge}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Manage records</Text>
+                <Pressable accessibilityRole="button" onPress={() => setManageVisible(false)}>
+                  <Text style={styles.closeText}>Close</Text>
+                </Pressable>
+              </View>
 
-            {isLoading ? (
-              <Text style={styles.placeholderText}>Loading records...</Text>
-            ) : (records ?? []).length === 0 ? (
-              <Text style={styles.placeholderText}>No records to manage yet.</Text>
-            ) : (
-              <FlatList
-                data={records}
-                keyExtractor={(item) => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.manageListContent}
-                renderItem={({ item }) => (
-                  <View style={styles.recordRow}>
-                    <View style={styles.recordMeta}>
-                      <Text style={styles.recordTitle} numberOfLines={1}>
-                        {item.category}
-                      </Text>
-                      <Text style={styles.recordSub} numberOfLines={1}>
-                        {formatShortDate(item.date)} • {item.kind === "expense" ? "Expense" : "Income"}
-                      </Text>
+              {isLoading ? (
+                <Text style={styles.placeholderText}>Loading records...</Text>
+              ) : (records ?? []).length === 0 ? (
+                <Text style={styles.placeholderText}>No records to manage yet.</Text>
+              ) : (
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.manageListContent}
+                >
+                  {(records ?? []).map((item) => (
+                    <View key={item.id} style={styles.recordRow}>
+                      <View style={styles.recordMeta}>
+                        <Text style={styles.recordTitle} numberOfLines={1}>
+                          {item.category}
+                        </Text>
+                        <Text style={styles.recordSub} numberOfLines={1}>
+                          {formatShortDate(item.date)} • {item.kind === "expense" ? "Expense" : "Income"}
+                        </Text>
+                      </View>
+                      <Text style={styles.recordAmount}>{formatCurrency(item.amount, currency)}</Text>
+                      <View style={styles.rowActions}>
+                        <Pressable
+                          accessibilityRole="button"
+                          style={styles.actionEdit}
+                          onPress={() => {
+                            setEditError("");
+                            setEditingRecord(toEditableRecord(item));
+                          }}
+                        >
+                          <Text style={styles.actionEditText}>Edit</Text>
+                        </Pressable>
+                        <Pressable
+                          accessibilityRole="button"
+                          style={styles.actionDelete}
+                          disabled={deleteMutation.isPending}
+                          onPress={() => void onDeleteRecord(item.id)}
+                        >
+                          <Text style={styles.actionDeleteText}>Delete</Text>
+                        </Pressable>
+                      </View>
                     </View>
-                    <Text style={styles.recordAmount}>{formatCurrency(item.amount, currency)}</Text>
-                    <View style={styles.rowActions}>
-                      <Pressable
-                        accessibilityRole="button"
-                        style={styles.actionEdit}
-                        onPress={() => {
-                          setEditError("");
-                          setEditingRecord(toEditableRecord(item));
-                        }}
-                      >
-                        <Text style={styles.actionEditText}>Edit</Text>
-                      </Pressable>
-                      <Pressable
-                        accessibilityRole="button"
-                        style={styles.actionDelete}
-                        disabled={deleteMutation.isPending}
-                        onPress={() => void onDeleteRecord(item.id)}
-                      >
-                        <Text style={styles.actionDeleteText}>Delete</Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                )}
-              />
-            )}
+                  ))}
+                </ScrollView>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
 
       <Modal visible={Boolean(editingRecord)} animationType="fade" transparent onRequestClose={() => setEditingRecord(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit record</Text>
-              <Pressable accessibilityRole="button" onPress={() => setEditingRecord(null)}>
-                <Text style={styles.closeText}>Close</Text>
-              </Pressable>
-            </View>
-
-            {editingRecord ? (
-              <View style={styles.editForm}>
-                <View style={styles.modeRow}>
-                  <Pressable
-                    accessibilityRole="button"
-                    style={[styles.modeChip, editingRecord.mode === "expense" ? styles.modeChipActive : undefined]}
-                    onPress={() => setEditingRecord((prev) => (prev ? { ...prev, mode: "expense" } : prev))}
-                  >
-                    <Text style={[styles.modeText, editingRecord.mode === "expense" ? styles.modeTextActive : undefined]}>Expense</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    style={[styles.modeChip, editingRecord.mode === "income" ? styles.modeChipActive : undefined]}
-                    onPress={() => setEditingRecord((prev) => (prev ? { ...prev, mode: "income" } : prev))}
-                  >
-                    <Text style={[styles.modeText, editingRecord.mode === "income" ? styles.modeTextActive : undefined]}>Income</Text>
-                  </Pressable>
-                </View>
-
-                <TextField
-                  label="Amount"
-                  value={editingRecord.amount}
-                  onChangeText={(value) => setEditingRecord((prev) => (prev ? { ...prev, amount: value } : prev))}
-                  keyboardType="decimal-pad"
-                />
-                <TextField
-                  label="Category"
-                  value={editingRecord.category}
-                  onChangeText={(value) => setEditingRecord((prev) => (prev ? { ...prev, category: value } : prev))}
-                />
-                <TextField
-                  label="Note (optional)"
-                  value={editingRecord.note}
-                  onChangeText={(value) => setEditingRecord((prev) => (prev ? { ...prev, note: value } : prev))}
-                />
-
-                {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
-
-                <PrimaryButton onPress={() => void onSaveEdit()} loading={updateMutation.isPending}>
-                  Save changes
-                </PrimaryButton>
+        <View style={{ flex: 1 }}>
+          <BlurView intensity={85} tint="dark" style={StyleSheet.absoluteFillObject} />
+          <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setEditingRecord(null)} />
+          <View style={styles.modalBackdrop} pointerEvents="box-none">
+            <View style={styles.modalCard}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit record</Text>
+                <Pressable accessibilityRole="button" onPress={() => setEditingRecord(null)}>
+                  <Text style={styles.closeText}>Close</Text>
+                </Pressable>
               </View>
-            ) : null}
+
+              {editingRecord ? (
+                <View style={styles.editForm}>
+                  <View style={styles.modeRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      style={[styles.modeChip, editingRecord.mode === "expense" ? styles.modeChipActive : undefined]}
+                      onPress={() => setEditingRecord((prev) => (prev ? { ...prev, mode: "expense" } : prev))}
+                    >
+                      <Text style={[styles.modeText, editingRecord.mode === "expense" ? styles.modeTextActive : undefined]}>Expense</Text>
+                    </Pressable>
+                    <Pressable
+                      accessibilityRole="button"
+                      style={[styles.modeChip, editingRecord.mode === "income" ? styles.modeChipActive : undefined]}
+                      onPress={() => setEditingRecord((prev) => (prev ? { ...prev, mode: "income" } : prev))}
+                    >
+                      <Text style={[styles.modeText, editingRecord.mode === "income" ? styles.modeTextActive : undefined]}>Income</Text>
+                    </Pressable>
+                  </View>
+
+                  <TextField
+                    label="Amount"
+                    value={editingRecord.amount}
+                    onChangeText={(value) => setEditingRecord((prev) => (prev ? { ...prev, amount: value } : prev))}
+                    keyboardType="decimal-pad"
+                  />
+                  <TextField
+                    label="Category"
+                    value={editingRecord.category}
+                    onChangeText={(value) => setEditingRecord((prev) => (prev ? { ...prev, category: value } : prev))}
+                  />
+                  <TextField
+                    label="Note (optional)"
+                    value={editingRecord.note}
+                    onChangeText={(value) => setEditingRecord((prev) => (prev ? { ...prev, note: value } : prev))}
+                  />
+
+                  {editError ? <Text style={styles.errorText}>{editError}</Text> : null}
+
+                  <PrimaryButton onPress={() => void onSaveEdit()} loading={updateMutation.isPending}>
+                    Save changes
+                  </PrimaryButton>
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
       </Modal>
@@ -365,29 +376,36 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
       fontSize: typography.sizeSm,
       color: colors.textSecondary
     },
-    themeRow: {
+    themePanelRow: {
       flexDirection: "row",
-      gap: spacing.xs
+      alignItems: "center",
+      justifyContent: "space-between"
     },
-    themeChip: {
-      flex: 1,
-      borderRadius: 10,
+    themePanelLeft: {
+      gap: 2,
+      flex: 1
+    },
+    themeToggleBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xxs,
+      borderRadius: 999,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.panel,
-      paddingVertical: spacing.sm,
-      alignItems: "center"
+      paddingVertical: 6,
+      paddingHorizontal: spacing.sm
     },
-    themeChipActive: {
+    themeToggleBtnDark: {
       borderColor: colors.accent,
       backgroundColor: colors.accentSoft
     },
-    themeChipText: {
+    themeToggleLabel: {
       fontFamily: typography.familySemiBold,
       fontSize: typography.sizeSm,
       color: colors.textSecondary
     },
-    themeChipTextActive: {
+    themeToggleLabelDark: {
       color: colors.accent
     },
     dropdownTrigger: {
@@ -423,13 +441,12 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
     },
     modalBackdrop: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.28)",
       justifyContent: "center",
       padding: spacing.lg
     },
     modalCard: {
       maxHeight: "82%",
-      borderRadius: 16,
+      borderRadius: 20,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
@@ -438,11 +455,14 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
     },
     modalCardLarge: {
       maxHeight: "86%",
-      borderRadius: 16,
+      borderRadius: 20,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       padding: spacing.md,
+      gap: spacing.sm
+    },
+    manageListContent: {
       gap: spacing.sm
     },
     modalHeader: {

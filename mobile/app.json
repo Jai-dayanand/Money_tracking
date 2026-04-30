@@ -4,7 +4,13 @@
     "slug": "money-tracking",
     "version": "0.1.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F4C35"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -13,7 +19,11 @@
       "bundleIdentifier": "com.moneytracking.app"
     },
     "android": {
-      "package": "com.moneytracking.app"
+      "package": "com.moneytracking.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0F4C35"
+      }
     },
     "web": {
       "bundler": "metro"

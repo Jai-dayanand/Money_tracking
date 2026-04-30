@@ -57,11 +57,11 @@ export function HomeScreen() {
       <View style={styles.kpiRow}>
         <Panel style={styles.kpiCard}>
           <Text style={styles.kpiLabel}>Income</Text>
-          <Text style={styles.kpiValue}>{summaryLoading ? "..." : formatCurrency(summary?.monthlyIncome ?? 0, currency)}</Text>
+          <Text style={styles.kpiValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{summaryLoading ? "..." : formatCurrency(summary?.monthlyIncome ?? 0, currency)}</Text>
         </Panel>
         <Panel style={styles.kpiCard}>
           <Text style={styles.kpiLabel}>Expenses</Text>
-          <Text style={styles.kpiValue}>{summaryLoading ? "..." : formatCurrency(summary?.monthlyExpense ?? 0, currency)}</Text>
+          <Text style={styles.kpiValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{summaryLoading ? "..." : formatCurrency(summary?.monthlyExpense ?? 0, currency)}</Text>
         </Panel>
       </View>
 
@@ -149,7 +149,8 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
     kpiValue: {
       fontFamily: typography.familyBold,
       fontSize: typography.sizeLg,
-      color: colors.textPrimary
+      color: colors.textPrimary,
+      flexShrink: 1
     },
     sectionHeader: {
       flexDirection: "row",

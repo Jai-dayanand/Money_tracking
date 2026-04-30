@@ -1,10 +1,9 @@
 import * as SecureStore from "expo-secure-store";
 import { ReactNode, createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Appearance, useColorScheme } from "react-native";
 
 import { AppColors, darkColors, lightColors } from "./colors";
 
-export type ThemeMode = "system" | "light" | "dark";
+export type ThemeMode = "light" | "dark";
 
 type ThemeContextValue = {
   colors: AppColors;
@@ -23,14 +22,14 @@ type AppThemeProviderProps = {
 const themeModeKey = "theme_mode";
 
 export function AppThemeProvider({ children }: AppThemeProviderProps) {
-  const systemScheme = useColorScheme();
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("system");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("light");
 
+  // Load persisted preference once on mount
   useEffect(() => {
     async function loadThemeMode() {
       const stored = await SecureStore.getItemAsync(themeModeKey);
 
-      if (stored === "light" || stored === "dark" || stored === "system") {
+      if (stored === "light" || stored === "dark") {
         setThemeModeState(stored);
       }
     }
@@ -38,8 +37,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
     void loadThemeMode();
   }, []);
 
-  const resolvedSystemScheme = systemScheme ?? Appearance.getColorScheme() ?? "light";
-  const isDark = themeMode === "dark" || (themeMode === "system" && resolvedSystemScheme === "dark");
+  const isDark = themeMode === "dark";
 
   const setThemeMode = (mode: ThemeMode) => {
     setThemeModeState(mode);

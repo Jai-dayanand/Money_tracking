@@ -29,8 +29,6 @@ const iconByRoute: Record<keyof RootTabParamList, keyof typeof Feather.glyphMap>
 
 export function RootNavigator() {
   const { colors, isDark } = useAppTheme();
-  const glassBackground = isDark ? "rgba(12,12,12,0.84)" : "rgba(255,255,255,0.75)";
-  const glassBorder = isDark ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.92)";
 
   const appTheme = {
     dark: isDark,
@@ -72,24 +70,28 @@ export function RootNavigator() {
           tabBarInactiveTintColor: colors.textSecondary,
           tabBarStyle: {
             position: "absolute",
+            bottom: 24,
+            left: 40,
+            right: 40,
+            borderRadius: 999,
             borderTopWidth: 0,
-            backgroundColor: glassBackground,
             borderWidth: 1,
-            borderColor: glassBorder,
-            height: 74,
-            marginHorizontal: 20,
-            marginBottom: 16,
-            borderRadius: 20,
-            paddingVertical: 10,
-            overflow: "hidden",
+            borderColor: colors.border,
+            backgroundColor: colors.surface,
+            height: 62,
+            paddingBottom: 0,
+            paddingTop: 0,
+            elevation: 12,
             shadowColor: colors.shadow,
-            shadowOpacity: 0.12,
-            shadowRadius: 14,
-            shadowOffset: {
-              width: 0,
-              height: 10
-            },
-            elevation: 6
+            shadowOpacity: 0.15,
+            shadowRadius: 20,
+            shadowOffset: { width: 0, height: 4 }
+          },
+          tabBarItemStyle: {
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            borderRadius: 999
           },
           tabBarIcon: ({ color, size, focused }) => (
             <Feather

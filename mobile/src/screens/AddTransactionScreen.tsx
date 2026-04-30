@@ -1,4 +1,6 @@
+import { Feather } from "@expo/vector-icons";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { BlurView } from "expo-blur";
 import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { FlatList, Modal, Pressable, StyleSheet, Text, View } from "react-native";
@@ -161,7 +163,7 @@ export function AddTransactionScreen() {
               <Text style={styles.categoryLabel}>Category</Text>
               <Pressable accessibilityRole="button" style={styles.categoryTrigger} onPress={() => setCategoryPickerOpen(true)}>
                 <Text style={styles.categoryText}>{selectedCategory || "Select category"}</Text>
-                <Text style={styles.dropdownArrow}>⌄</Text>
+                <Feather name="chevron-down" size={18} color={colors.textSecondary} style={{ marginLeft: spacing.sm }} />
               </Pressable>
               {errors.category?.message ? <Text style={styles.errorText}>{errors.category.message}</Text> : null}
 
@@ -171,38 +173,42 @@ export function AddTransactionScreen() {
                 transparent
                 onRequestClose={() => setCategoryPickerOpen(false)}
               >
-                <View style={styles.modalBackdrop}>
-                  <View style={styles.modalCard}>
-                    <View style={styles.modalHeader}>
-                      <Text style={styles.modalTitle}>Select {mode} category</Text>
-                      <Pressable accessibilityRole="button" onPress={() => setCategoryPickerOpen(false)}>
-                        <Text style={styles.closeText}>Close</Text>
-                      </Pressable>
+                <View style={{ flex: 1 }}>
+                  <BlurView intensity={85} tint="dark" style={StyleSheet.absoluteFillObject} />
+                  <Pressable style={StyleSheet.absoluteFillObject} onPress={() => setCategoryPickerOpen(false)} />
+                  <View style={styles.modalBackdrop} pointerEvents="box-none">
+                    <View style={styles.modalCard}>
+                      <View style={styles.modalHeader}>
+                        <Text style={styles.modalTitle}>Select {mode} category</Text>
+                        <Pressable accessibilityRole="button" onPress={() => setCategoryPickerOpen(false)}>
+                          <Text style={styles.closeText}>Close</Text>
+                        </Pressable>
+                      </View>
+
+                      <FlatList
+                        data={categoryOptions}
+                        keyExtractor={(item) => item}
+                        keyboardShouldPersistTaps="handled"
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={styles.categoryList}
+                        renderItem={({ item }) => {
+                          const active = item === selectedCategory;
+
+                          return (
+                            <Pressable
+                              accessibilityRole="button"
+                              style={[styles.categoryItem, active ? styles.categoryItemActive : undefined]}
+                              onPress={() => {
+                                onChange(item);
+                                setCategoryPickerOpen(false);
+                              }}
+                            >
+                              <Text style={[styles.categoryItemText, active ? styles.categoryItemTextActive : undefined]}>{item}</Text>
+                            </Pressable>
+                          );
+                        }}
+                      />
                     </View>
-
-                    <FlatList
-                      data={categoryOptions}
-                      keyExtractor={(item) => item}
-                      keyboardShouldPersistTaps="handled"
-                      showsVerticalScrollIndicator={false}
-                      contentContainerStyle={styles.categoryList}
-                      renderItem={({ item }) => {
-                        const active = item === selectedCategory;
-
-                        return (
-                          <Pressable
-                            accessibilityRole="button"
-                            style={[styles.categoryItem, active ? styles.categoryItemActive : undefined]}
-                            onPress={() => {
-                              onChange(item);
-                              setCategoryPickerOpen(false);
-                            }}
-                          >
-                            <Text style={[styles.categoryItemText, active ? styles.categoryItemTextActive : undefined]}>{item}</Text>
-                          </Pressable>
-                        );
-                      }}
-                    />
                   </View>
                 </View>
               </Modal>
@@ -304,12 +310,6 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
       fontSize: typography.sizeMd,
       flex: 1
     },
-    dropdownArrow: {
-      fontFamily: typography.familySemiBold,
-      color: colors.textSecondary,
-      fontSize: typography.sizeMd,
-      marginLeft: spacing.sm
-    },
     errorText: {
       fontFamily: typography.familyRegular,
       color: colors.danger,
@@ -317,13 +317,12 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
     },
     modalBackdrop: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.28)",
       justifyContent: "center",
       padding: spacing.lg
     },
     modalCard: {
       maxHeight: "74%",
-      borderRadius: 16,
+      borderRadius: 20,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
