@@ -67,19 +67,26 @@ function buildFallbackSummary(transactions: Transaction[]): Summary {
   };
 }
 
-export async function getTransactions(): Promise<Transaction[]> {
+export async function getTransactions(token: string): Promise<Transaction[]> {
   try {
-    const data = await http<ServerTransaction[]>("/api/v1/transactions");
+    const data = await http<ServerTransaction[]>("/api/v1/transactions", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return data.map(mapServerTransaction);
   } catch {
     return fallbackStore;
   }
 }
 
-export async function createTransaction(payload: CreateTransactionPayload): Promise<Transaction> {
+export async function createTransaction(payload: CreateTransactionPayload, token: string): Promise<Transaction> {
   try {
     const data = await http<ServerTransaction>("/api/v1/transactions", {
       method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
       body: JSON.stringify({
         title: payload.title,
         amount: payload.amount,
@@ -103,9 +110,13 @@ export async function createTransaction(payload: CreateTransactionPayload): Prom
   }
 }
 
-export async function getSummary(): Promise<Summary> {
+export async function getSummary(token: string): Promise<Summary> {
   try {
-    const data = await http<ServerSummary>("/api/v1/transactions/summary");
+    const data = await http<ServerSummary>("/api/v1/transactions/summary", {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
     return {
       monthlyIncome: data.monthly_income,
       monthlyExpense: data.monthly_expense,
@@ -117,10 +128,13 @@ export async function getSummary(): Promise<Summary> {
   }
 }
 
-export async function updateTransaction(transactionId: string, payload: UpdateTransactionPayload): Promise<Transaction> {
+export async function updateTransaction(transactionId: string, payload: UpdateTransactionPayload, token: string): Promise<Transaction> {
   try {
     const data = await http<ServerTransaction>(`/api/v1/transactions/${transactionId}`, {
       method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
       body: JSON.stringify({
         title: payload.title,
         amount: payload.amount,
@@ -144,12 +158,16 @@ export async function updateTransaction(transactionId: string, payload: UpdateTr
   }
 }
 
-export async function deleteTransaction(transactionId: string): Promise<void> {
+export async function deleteTransaction(transactionId: string, token: string): Promise<void> {
   try {
     await http<unknown>(`/api/v1/transactions/${transactionId}`, {
-      method: "DELETE"
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
     });
-  } catch {
     fallbackStore = fallbackStore.filter((item) => item.id !== transactionId);
+  } catch {
+    // Error handled by http client
   }
 }

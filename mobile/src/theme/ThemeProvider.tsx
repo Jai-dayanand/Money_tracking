@@ -10,7 +10,6 @@ type ThemeContextValue = {
   isDark: boolean;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
-  toggleTheme: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -49,8 +48,7 @@ export function AppThemeProvider({ children }: AppThemeProviderProps) {
       colors: isDark ? darkColors : lightColors,
       isDark,
       themeMode,
-      setThemeMode,
-      toggleTheme: () => setThemeMode(isDark ? "light" : "dark")
+      setThemeMode
     }),
     [isDark, themeMode]
   );

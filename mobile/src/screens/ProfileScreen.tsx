@@ -16,6 +16,7 @@ import { Panel } from "../components/Panel";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { Screen } from "../components/Screen";
 import { TextField } from "../components/TextField";
+import { useAuth } from "../auth";
 import { useDeleteTransaction, useTransactions, useUpdateTransaction } from "../hooks/useTransactions";
 import { usePreferences } from "../preferences";
 import { spacing, typography, useAppTheme } from "../theme";
@@ -48,8 +49,9 @@ function toEditableRecord(item: Transaction): EditableRecord {
 
 
 export function ProfileScreen() {
-  const { colors, isDark, toggleTheme } = useAppTheme();
+  const { colors, themeMode, setThemeMode } = useAppTheme();
   const styles = createStyles(colors);
+  const { user, logout } = useAuth();
   const { currency, currencyOptions, setCurrency } = usePreferences();
   const { data: records, isLoading } = useTransactions();
   const deleteMutation = useDeleteTransaction();
@@ -61,6 +63,7 @@ export function ProfileScreen() {
   const [isManageVisible, setManageVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<EditableRecord | null>(null);
   const [editError, setEditError] = useState("");
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const activeCurrency = useMemo(() => {
     return currencyOptions.find((item) => item.code === currency);
@@ -123,12 +126,29 @@ export function ProfileScreen() {
     setEditingRecord(null);
   };
 
+  const handleLogout = async () => {
+    await logout();
+    setShowLogoutConfirm(false);
+  };
+
   return (
     <Screen>
       <View style={styles.header}>
         <Text style={styles.title}>Profile</Text>
         <Text style={styles.subtitle}>Personalize your default settings.</Text>
       </View>
+
+      {user && (
+        <Panel style={styles.section}>
+          <View style={styles.userCard}>
+            <View style={styles.userCardLeft}>
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
+            </View>
+            <Feather name="user-circle" size={48} color={colors.accent} />
+          </View>
+        </Panel>
+      )}
 
       <Panel style={styles.section}>
         <Text style={styles.sectionTitle}>Currency</Text>
@@ -150,26 +170,47 @@ export function ProfileScreen() {
       </Panel>
 
       <Panel style={styles.section}>
-        <View style={styles.themePanelRow}>
-          <View style={styles.themePanelLeft}>
-            <Text style={styles.sectionTitle}>Theme</Text>
-            <Text style={styles.sectionHint}>{isDark ? "Dark mode" : "Light mode"}</Text>
-          </View>
+        <Text style={styles.sectionTitle}>Theme</Text>
+        <Text style={styles.sectionHint}>Choose your preferred color scheme.</Text>
+        <View style={styles.themeOptionsRow}>
           <Pressable
             accessibilityRole="button"
-            style={[styles.themeToggleBtn, isDark ? styles.themeToggleBtnDark : undefined]}
-            onPress={toggleTheme}
+            style={[styles.themeOption, themeMode === "light" && styles.themeOptionActive]}
+            onPress={() => setThemeMode("light")}
           >
             <Feather
-              name={isDark ? "moon" : "sun"}
+              name="sun"
               size={16}
-              color={isDark ? colors.accent : colors.textSecondary}
+              color={themeMode === "light" ? colors.accent : colors.textSecondary}
             />
-            <Text style={[styles.themeToggleLabel, isDark ? styles.themeToggleLabelDark : undefined]}>
-              {isDark ? "Dark" : "Light"}
+            <Text style={[styles.themeOptionLabel, themeMode === "light" && styles.themeOptionLabelActive]}>
+              Light
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            style={[styles.themeOption, themeMode === "dark" && styles.themeOptionActive]}
+            onPress={() => setThemeMode("dark")}
+          >
+            <Feather
+              name="moon"
+              size={16}
+              color={themeMode === "dark" ? colors.accent : colors.textSecondary}
+            />
+            <Text style={[styles.themeOptionLabel, themeMode === "dark" && styles.themeOptionLabelActive]}>
+              Dark
             </Text>
           </Pressable>
         </View>
+      </Panel>
+
+      <Panel style={[styles.section, styles.sectionDanger]}>
+        <Text style={styles.sectionTitle}>Account</Text>
+        <PrimaryButton onPress={() => setShowLogoutConfirm(true)} style={styles.logoutButton}>
+          <Feather name="log-out" size={16} color={colors.danger} />
+          <Text style={styles.logoutButtonText}>Log Out</Text>
+        </PrimaryButton>
       </Panel>
 
       <Modal visible={isPickerVisible} animationType="fade" transparent onRequestClose={() => setPickerVisible(false)}>
@@ -344,6 +385,32 @@ export function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={showLogoutConfirm} animationType="fade" transparent onRequestClose={() => setShowLogoutConfirm(false)}>
+        <View style={{ flex: 1, backgroundColor: "rgba(0, 0, 0, 0.5)" }}>
+          <View style={[styles.logoutConfirmModal, { backgroundColor: colors.surface }]}>
+            <Text style={styles.logoutConfirmTitle}>Log Out?</Text>
+            <Text style={styles.logoutConfirmMessage}>Are you sure you want to log out of your account?</Text>
+            
+            <View style={styles.logoutConfirmActions}>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.logoutConfirmBtn, styles.logoutConfirmBtnCancel]}
+                onPress={() => setShowLogoutConfirm(false)}
+              >
+                <Text style={styles.logoutConfirmBtnCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={[styles.logoutConfirmBtn, styles.logoutConfirmBtnLogout]}
+                onPress={() => void handleLogout()}
+              >
+                <Text style={styles.logoutConfirmBtnLogoutText}>Log Out</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -366,6 +433,9 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
     section: {
       gap: spacing.sm
     },
+    sectionDanger: {
+      marginBottom: spacing.lg
+    },
     sectionTitle: {
       fontFamily: typography.familySemiBold,
       fontSize: typography.sizeMd,
@@ -376,37 +446,121 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
       fontSize: typography.sizeSm,
       color: colors.textSecondary
     },
-    themePanelRow: {
+    userCard: {
       flexDirection: "row",
+      justifyContent: "space-between",
       alignItems: "center",
-      justifyContent: "space-between"
+      paddingVertical: spacing.sm
     },
-    themePanelLeft: {
-      gap: 2,
-      flex: 1
+    userCardLeft: {
+      flex: 1,
+      gap: spacing.xxs
     },
-    themeToggleBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: spacing.xxs,
-      borderRadius: 999,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.panel,
-      paddingVertical: 6,
-      paddingHorizontal: spacing.sm
-    },
-    themeToggleBtnDark: {
-      borderColor: colors.accent,
-      backgroundColor: colors.accentSoft
-    },
-    themeToggleLabel: {
+    userName: {
       fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeMd,
+      color: colors.textPrimary
+    },
+    userEmail: {
+      fontFamily: typography.familyRegular,
       fontSize: typography.sizeSm,
       color: colors.textSecondary
     },
-    themeToggleLabelDark: {
+    themeOptionsRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      alignItems: "center"
+    },
+    themeOption: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.xxs,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.panel,
+      paddingVertical: 12,
+      paddingHorizontal: spacing.sm
+    },
+    themeOptionActive: {
+      borderColor: colors.accent,
+      backgroundColor: colors.accentSoft
+    },
+    themeOptionLabel: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary,
+      textAlign: "center"
+    },
+    themeOptionLabelActive: {
       color: colors.accent
+    },
+    logoutButton: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      backgroundColor: "transparent",
+      borderWidth: 1,
+      borderColor: colors.danger,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.lg
+    },
+    logoutButtonText: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.danger
+    },
+    logoutConfirmModal: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      marginHorizontal: spacing.lg,
+      borderRadius: 20,
+      padding: spacing.md,
+      gap: spacing.md
+    },
+    logoutConfirmTitle: {
+      fontFamily: typography.familyBold,
+      fontSize: typography.sizeMd,
+      color: colors.textPrimary,
+      textAlign: "center"
+    },
+    logoutConfirmMessage: {
+      fontFamily: typography.familyRegular,
+      fontSize: typography.sizeSm,
+      color: colors.textSecondary,
+      textAlign: "center"
+    },
+    logoutConfirmActions: {
+      flexDirection: "row",
+      gap: spacing.md,
+      width: "100%",
+      marginTop: spacing.sm
+    },
+    logoutConfirmBtn: {
+      flex: 1,
+      paddingVertical: spacing.md,
+      borderRadius: 10,
+      alignItems: "center"
+    },
+    logoutConfirmBtnCancel: {
+      backgroundColor: colors.panel,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    logoutConfirmBtnCancelText: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.textPrimary
+    },
+    logoutConfirmBtnLogout: {
+      backgroundColor: colors.danger
+    },
+    logoutConfirmBtnLogoutText: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.surface
     },
     dropdownTrigger: {
       borderWidth: 1,

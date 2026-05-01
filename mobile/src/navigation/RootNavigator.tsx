@@ -79,8 +79,8 @@ export function RootNavigator() {
             borderColor: colors.border,
             backgroundColor: colors.surface,
             height: 62,
-            paddingBottom: 0,
-            paddingTop: 0,
+            paddingHorizontal: 8,
+            paddingVertical: 0,
             elevation: 12,
             shadowColor: colors.shadow,
             shadowOpacity: 0.15,
@@ -91,7 +91,9 @@ export function RootNavigator() {
             flex: 1,
             justifyContent: "center",
             alignItems: "center",
-            borderRadius: 999
+            borderRadius: 999,
+            paddingHorizontal: 8,
+            paddingVertical: 0
           },
           tabBarIcon: ({ color, size, focused }) => (
             <Feather

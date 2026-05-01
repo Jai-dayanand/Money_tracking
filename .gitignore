@@ -62,3 +62,6 @@ tmp/
 .cache/
 .pytest_cache/
 backend/.pytest_cache/
+backend/data/
+backend/*.sqlite3
+backend/*.db

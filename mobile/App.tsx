@@ -7,14 +7,15 @@ import {
   useFonts
 } from "@expo-google-fonts/plus-jakarta-sans";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { AuthProvider, useAuth } from "./src/auth";
 import { PreferencesProvider } from "./src/preferences";
 import { RootNavigator } from "./src/navigation/RootNavigator";
+import { LoginScreen } from "./src/screens/LoginScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
 import { BiometricGate } from "./src/security/BiometricGate";
 import { AppThemeProvider, lightColors, useAppTheme } from "./src/theme";
@@ -31,32 +32,53 @@ const onboardingKey = "onboarding_complete";
 
 function AppBody() {
   const { colors, isDark } = useAppTheme();
+  const { isSignedIn, isLoading, user } = useAuth();
   const [onboardingResolved, setOnboardingResolved] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  console.log("[AppBody] Auth state:", { isSignedIn, isLoading, user: user?.email });
+
   useEffect(() => {
     async function loadOnboardingState() {
-      const completed = await SecureStore.getItemAsync(onboardingKey);
-      setShowOnboarding(completed !== "true");
-      setOnboardingResolved(true);
+      import("expo-secure-store").then((SecureStore) => {
+        void (async () => {
+          const completed = await SecureStore.getItemAsync(onboardingKey);
+          setShowOnboarding(completed !== "true");
+          setOnboardingResolved(true);
+        })();
+      });
     }
 
     void loadOnboardingState();
   }, []);
 
   const finishOnboarding = async () => {
+    const SecureStore = await import("expo-secure-store");
     await SecureStore.setItemAsync(onboardingKey, "true");
     setShowOnboarding(false);
   };
 
-  if (!onboardingResolved) {
+  if (isLoading || !onboardingResolved) {
+    console.log("[AppBody] Loading or onboarding not resolved");
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}> 
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
   }
 
+  // Show login if not signed in
+  if (!isSignedIn) {
+    console.log("[AppBody] Not signed in, showing LoginScreen");
+    return (
+      <>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <LoginScreen />
+      </>
+    );
+  }
+
+  console.log("[AppBody] Signed in, showing RootNavigator");
   return (
     <BiometricGate>
       <StatusBar style={isDark ? "light" : "dark"} />
@@ -84,9 +106,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <AppThemeProvider>
-          <PreferencesProvider>
-            <AppBody />
-          </PreferencesProvider>
+          <AuthProvider>
+            <PreferencesProvider>
+              <AppBody />
+            </PreferencesProvider>
+          </AuthProvider>
         </AppThemeProvider>
       </SafeAreaProvider>
     </QueryClientProvider>

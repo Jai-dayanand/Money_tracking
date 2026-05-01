@@ -26,15 +26,21 @@ export function BiometricGate({ children }: BiometricGateProps) {
       const hasHardware = await LocalAuthentication.hasHardwareAsync();
       const isEnrolled = await LocalAuthentication.isEnrolledAsync();
 
+      console.log("[BiometricGate] Hardware:", hasHardware, "Enrolled:", isEnrolled);
+
       if (!hasHardware || !isEnrolled) {
+        console.log("[BiometricGate] No biometrics available, unlocking automatically");
         setState("unlocked");
         return;
       }
 
+      console.log("[BiometricGate] Attempting biometric authentication");
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: "Unlock Money Tracking",
         fallbackLabel: "Use device passcode"
       });
+
+      console.log("[BiometricGate] Authentication result:", result.success);
 
       if (result.success) {
         setState("unlocked");
@@ -42,7 +48,8 @@ export function BiometricGate({ children }: BiometricGateProps) {
       }
 
       setState("locked");
-    } catch {
+    } catch (error) {
+      console.error("[BiometricGate] Error:", error);
       setState("unlocked");
     }
   }

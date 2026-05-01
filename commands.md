@@ -20,7 +20,7 @@ pip install -e .
 ```powershell
 cd backend
 .\venv\Scripts\Activate.ps1
-uvicorn app.main:app --app-dir .. --reload --port 8000
+uvicorn app.main:app --app-dir .. --host 0.0.0.0 --reload --port 8000
 ```
 
 Note: Do not run `pip install app`. That installs an unrelated third-party package named `app`.
@@ -68,7 +68,7 @@ Terminal 1:
 ```powershell
 cd backend
 .\venv\Scripts\Activate.ps1
-uvicorn app.main:app --app-dir .. --reload --port 8000
+uvicorn app.main:app --app-dir .. --host 0.0.0.0 --reload --port 8000
 ```
 
 Terminal 2:
