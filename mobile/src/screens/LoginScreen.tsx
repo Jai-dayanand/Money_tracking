@@ -102,7 +102,17 @@ export function LoginScreen() {
               />
             </View>
 
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? (
+              <View style={styles.errorCard} accessibilityRole="alert">
+                <View style={styles.errorIcon}>
+                  <Text style={styles.errorIconText}>!</Text>
+                </View>
+                <View style={styles.errorBody}>
+                  <Text style={styles.errorTitle}>{isSignUp ? "Sign up failed" : "Login failed"}</Text>
+                  <Text style={styles.errorMessage}>{error}</Text>
+                </View>
+              </View>
+            ) : null}
 
             <PrimaryButton onPress={() => void handleSubmit()} loading={isLoading}>
               {isSignUp ? "Create Account" : "Log In"}
@@ -166,11 +176,42 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
       color: colors.textPrimary,
       backgroundColor: colors.surface
     },
-    errorText: {
+    errorCard: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+      padding: spacing.md,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.danger,
+      backgroundColor: colors.panel
+    },
+    errorIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.danger,
+      alignItems: "center",
+      justifyContent: "center"
+    },
+    errorIconText: {
+      fontFamily: typography.familyBold,
+      fontSize: typography.sizeSm,
+      color: colors.surface
+    },
+    errorBody: {
+      flex: 1,
+      gap: spacing.xs
+    },
+    errorTitle: {
+      fontFamily: typography.familySemiBold,
+      fontSize: typography.sizeSm,
+      color: colors.textPrimary
+    },
+    errorMessage: {
       fontFamily: typography.familyRegular,
       fontSize: typography.sizeSm,
-      color: colors.danger,
-      marginTop: spacing.xs
+      color: colors.textSecondary
     },
     footer: {
       flexDirection: "row",

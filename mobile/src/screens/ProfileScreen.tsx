@@ -145,7 +145,7 @@ export function ProfileScreen() {
               <Text style={styles.userName}>{user.name}</Text>
               <Text style={styles.userEmail}>{user.email}</Text>
             </View>
-            <Feather name="user-circle" size={48} color={colors.accent} />
+            <Feather name="user" size={48} color={colors.accent} />
           </View>
         </Panel>
       )}
