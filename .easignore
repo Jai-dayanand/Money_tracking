@@ -1,0 +1,12 @@
+# Ignore local caches and virtualenvs
+backend/pytest-cache-files-*
+backend/.pytest_cache/
+backend/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.venv/
+**/node_modules/
+**/.expo/
+**/.expo-shared/
+**/dist/
+**/build/
