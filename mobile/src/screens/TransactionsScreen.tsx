@@ -13,9 +13,17 @@ import { formatCurrency } from "../utils/format";
 
 type Filter = "all" | "income" | "expense";
 type ViewMode = "list" | "calendar";
+type CalendarMarkedDate = {
+  marked?: boolean;
+  dotColor?: string;
+  selected?: boolean;
+  selectedColor?: string;
+  selectedTextColor?: string;
+  transactions: Transaction[];
+};
 
 export function TransactionsScreen() {
-  const { colors } = useAppTheme();
+  const { colors, themeMode } = useAppTheme();
   const styles = createStyles(colors);
   const { data, isLoading, refetch } = useTransactions();
   const [filter, setFilter] = useState<Filter>("all");
@@ -35,50 +43,84 @@ export function TransactionsScreen() {
     return data.filter((item) => item.kind === filter);
   }, [data, filter]);
 
-  // Build calendar marked dates with transaction counts
   const markedDates = useMemo(() => {
-    const marked: Record<string, any> = {};
+    const marked: Record<string, CalendarMarkedDate> = {};
 
-    if (data) {
-      data.forEach((transaction) => {
-        const dateKey = transaction.date;
+    filteredData.forEach((transaction) => {
+      const dateKey = transaction.date;
 
-        if (!marked[dateKey]) {
-          marked[dateKey] = {
-            marked: true,
-            dotColor: transaction.kind === "income" ? colors.accent : colors.warn,
-            transactions: []
-          };
-        }
+      if (!marked[dateKey]) {
+        marked[dateKey] = {
+          marked: true,
+          dotColor: transaction.kind === "income" ? colors.accent : colors.warn,
+          transactions: []
+        };
+      }
 
-        if (Array.isArray(marked[dateKey].transactions)) {
-          marked[dateKey].transactions.push(transaction);
-        }
-      });
-    }
+      marked[dateKey].transactions.push(transaction);
+    });
 
-    // Mark selected date
-    if (selectedDate && marked[selectedDate]) {
-      marked[selectedDate].selected = true;
-      marked[selectedDate].selectedColor = colors.accent;
+    if (selectedDate) {
+      marked[selectedDate] = {
+        ...(marked[selectedDate] ?? {}),
+        selected: true,
+        selectedColor: colors.accent,
+        selectedTextColor: colors.surface,
+        transactions: marked[selectedDate]?.transactions ?? []
+      };
     }
 
     return marked;
-  }, [data, selectedDate, colors]);
+  }, [filteredData, selectedDate, colors.accent, colors.surface, colors.warn]);
+
+  const calendarTheme = useMemo(
+    () => ({
+      backgroundColor: colors.surface,
+      calendarBackground: colors.surface,
+      textSectionTitleColor: colors.textSecondary,
+      textSectionTitleDisabledColor: colors.textSecondary,
+      selectedDayBackgroundColor: colors.accent,
+      selectedDayTextColor: colors.surface,
+      todayTextColor: colors.accent,
+      dayTextColor: colors.textPrimary,
+      textDisabledColor: colors.textSecondary,
+      dotColor: colors.accent,
+      selectedDotColor: colors.surface,
+      arrowColor: colors.accent,
+      disabledArrowColor: colors.textSecondary,
+      monthTextColor: colors.textPrimary,
+      indicatorColor: colors.accent,
+      "stylesheet.calendar.basic": {
+        container: {
+          backgroundColor: colors.surface
+        }
+      },
+      "stylesheet.day.basic": {
+        text: {
+          marginTop: 4,
+          fontSize: 14,
+          fontWeight: "500" as const,
+          color: colors.textPrimary,
+          fontFamily: typography.familySemiBold
+        }
+      }
+    }),
+    [colors]
+  );
 
   const transactionsForSelectedDate = useMemo(() => {
     if (!selectedDate || !markedDates[selectedDate]) {
       return [];
     }
 
-    const transactions = markedDates[selectedDate].transactions || [];
+    const transactions = markedDates[selectedDate].transactions;
 
     if (filter === "all") {
       return transactions;
     }
 
     return transactions.filter((item: Transaction) => item.kind === filter);
-  }, [selectedDate, markedDates, filter]);
+  }, [selectedDate, markedDates, filter]) satisfies Transaction[];
 
   const handleDatePress = (date: DateData) => {
     setSelectedDate(date.dateString);
@@ -122,39 +164,10 @@ export function TransactionsScreen() {
       {viewMode === "calendar" ? (
         <View style={styles.calendarContainer}>
           <Calendar
+            key={`transactions-calendar-${themeMode}`}
             markedDates={markedDates}
             onDayPress={handleDatePress}
-            theme={{
-              backgroundColor: colors.surface,
-              calendarBackground: colors.surface,
-              textSectionTitleColor: colors.textSecondary,
-              textSectionTitleDisabledColor: colors.textSecondary,
-              selectedDayBackgroundColor: colors.accent,
-              selectedDayTextColor: colors.surface,
-              todayTextColor: colors.accent,
-              dayTextColor: colors.textPrimary,
-              textDisabledColor: colors.textSecondary,
-              dotColor: colors.accent,
-              selectedDotColor: colors.surface,
-              arrowColor: colors.accent,
-              disabledArrowColor: colors.textSecondary,
-              monthTextColor: colors.textPrimary,
-              indicatorColor: colors.accent,
-              "stylesheet.calendar.basic": {
-                container: {
-                  backgroundColor: colors.surface
-                }
-              },
-              "stylesheet.day.basic": {
-                text: {
-                  marginTop: 4,
-                  fontSize: 14,
-                  fontWeight: "500",
-                  color: colors.textPrimary,
-                  fontFamily: typography.familySemiBold
-                }
-              }
-            }}
+            theme={calendarTheme}
             enableSwipeMonths
           />
         </View>

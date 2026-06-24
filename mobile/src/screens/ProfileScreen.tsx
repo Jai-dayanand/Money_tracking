@@ -207,10 +207,14 @@ export function ProfileScreen() {
 
       <Panel style={[styles.section, styles.sectionDanger]}>
         <Text style={styles.sectionTitle}>Account</Text>
-        <PrimaryButton onPress={() => setShowLogoutConfirm(true)} style={styles.logoutButton}>
+        <Pressable
+          accessibilityRole="button"
+          style={styles.logoutButton}
+          onPress={() => setShowLogoutConfirm(true)}
+        >
           <Feather name="log-out" size={16} color={colors.danger} />
           <Text style={styles.logoutButtonText}>Log Out</Text>
-        </PrimaryButton>
+        </Pressable>
       </Panel>
 
       <Modal visible={isPickerVisible} animationType="fade" transparent onRequestClose={() => setPickerVisible(false)}>
@@ -614,9 +618,6 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
       borderWidth: 1,
       borderColor: colors.border,
       padding: spacing.md,
-      gap: spacing.sm
-    },
-    manageListContent: {
       gap: spacing.sm
     },
     modalHeader: {
